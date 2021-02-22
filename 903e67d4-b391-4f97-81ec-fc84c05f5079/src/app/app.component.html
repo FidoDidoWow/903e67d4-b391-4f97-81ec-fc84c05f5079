@@ -1,0 +1,153 @@
+<div>
+  <h1>導師-線上點名</h1>
+  <div>
+    <div *ngIf="canCrossDate"
+         style="margin-top:15px;">
+      <span>日期：</span>
+      <div style="position: relative;display: inline-block;vertical-align: middle;">
+        <div class="input-group input-group-sm"
+             style="width:600px;">
+          <input type="text"
+                 class="form-control"
+                 [ngModel]="inputDate"
+                 (ngModelChange)="checkDate($event)" />
+          <span class="input-group-btn">
+            <button type="button"
+                    class="btn btn-default"
+                    (click)="setCurrentDate(todayDate)"
+                    [ngClass]="{'btn-primary': getDateString(currentDate)==getDateString(todayDate)}">今天
+            </button>
+            <button type="button"
+                    (click)="setCurrentDate(currentDate, -1)"
+                    class="btn btn-default">&lt;&lt;
+            </button>
+            <button type="button"
+                    *ngFor="let qdate of quickSelectDate"
+                    class="btn btn-default"
+                    [ngClass]="{'btn-primary': getDateString(qdate)==getDateString(currentDate)&&getDateString(currentDate)==getDateString(todayDate), 'btn-warning': getDateString(qdate)==getDateString(currentDate)&&getDateString(currentDate)!==getDateString(todayDate)}"
+                    (click)="setCurrentDate(qdate)">{{getDisplayDateString(qdate)}}
+            </button>
+            <button type="button"
+                    (click)="setCurrentDate(currentDate, 1)"
+                    class="btn btn-default">>>
+            </button>
+            <!-- <button type="button"
+                    (click)="setCurrentDate(currentDate, -7)"
+                    class="btn btn-default">上一週
+            </button>
+            <button type="button"
+                    (click)="setCurrentDate(currentDate, 7)"
+                    class="btn btn-default">下一週
+            </button> -->
+          </span>
+        </div>
+      </div>
+      <span *ngIf="inputDate!=getDateString(currentDate)"
+            class="text-danger">日期格式錯誤</span>
+    </div>
+    <div *ngIf="!canCrossDate"
+         style="margin-top:15px;">
+      <span>日期：{{getDateString(todayDate)}}</span>
+    </div>
+    <div style="margin-top:15px;">
+      <span>請選擇班級：</span>
+      <div class="btn-group"
+           role="group"
+           aria-label="假別">
+        <button *ngFor="let item of classes"
+                (click)="toggleClassDate(item)"
+                type="button"
+                class="btn btn-sm"
+                [ngClass]="{'btn-primary': selClass==item, 'btn-default': selClass!=item}">{{item.className}}</button>
+      </div>
+    </div>
+  </div>
+  <div *ngIf="selClass">
+    <div style="margin-top:15px;">
+      <span>請選擇假別：</span>
+      <div class="btn-group"
+           role="group"
+           aria-label="假別">
+        <button (click)="currAbs=clearAbs"
+                type="button"
+                class="btn btn-sm"
+                [ngClass]="{'btn-primary': currAbs==clearAbs, 'btn-default': currAbs!=clearAbs}">清除</button>
+        <button *ngFor="let abs of absences"
+                (click)="currAbs=abs"
+                type="button"
+                class="btn btn-sm"
+                [ngClass]="{'btn-primary': currAbs==abs, 'btn-default': currAbs!=abs}">{{abs.name}}</button>
+      </div>
+    </div>
+    <table class="table table-bordered table-hover table-striped"
+           style="margin-top: 15px;">
+      <thead>
+        <tr>
+          <th class="thBorder"
+              style="min-width:110px;">
+            <div *ngIf="getDateString(currentDate)==getDateString(todayDate)">
+              <div class="btn-group">
+                <button (click)="saveData()"
+                        type="button"
+                        class="btn btn-sm"
+                        [ngClass]="{'btn-success': completed=='t', 'btn-warning': completed!='t'}">
+                  {{(completed=='t') ? '儲存變更 '+getDisplayDateString(currentDate)+'' : '完成點名
+                  '+getDisplayDateString(currentDate)+''}}
+                </button>
+              </div>
+              <span *ngIf="completed=='t'"
+                    class="text-muted">
+                已點名
+              </span>
+            </div>
+            <div *ngIf="getDateString(currentDate)!=getDateString(todayDate)">
+              <div class="btn-group">
+                <button (click)="saveData()"
+                        type="button"
+                        class="btn btn-sm btn-danger">
+                  {{'儲存變更 '+getDisplayDateString(currentDate)+''}}
+                </button>
+              </div>
+            </div>
+          </th>
+          <th *ngFor="let period of periods"
+              (click)="setAllStudentsAbs(period)"
+              class="setBtn thBorder text-center">
+            {{period.name}}
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <ng-container *ngFor="let stu of students;let i = index">
+          <tr *ngIf="i > 0 && i % 5 ==0">
+            <th class="thBorder">
+            </th>
+            <th *ngFor="let period of periods"
+                (click)="setAllStudentsAbs(period)"
+                class="setBtn thBorder text-center">
+              {{period.name}}
+            </th>
+          </tr>
+          <tr>
+            <td (click)="setStudentAllPeriodAbs(stu)"
+                class="setBtn">
+              {{stu.seatNo}}. {{stu.name}}
+            </td>
+            <td *ngFor="let period of periods"
+                (click)="setStudentPeroidAbs(stu, period)"
+                title="{{period.name}}"
+                [class.setBtn]="!(stu.leaveList.get(period.name)?.isLock)"
+                style="position:relative">
+              <div *ngIf="stu.leaveList.get(period.name)?.absName != stu.orileaveList.get(period.name)?.absName"
+                   style="display:inline-block;background-color:red;position:absolute;left:3px;top:3px;width:5px;height:6px;border-radius:5px;"></div>
+              <span [class.text-muted]="(stu.leaveList.get(period.name)?.isLock)">
+                {{toShort(stu.leaveList.get(period.name)?.absName)}}
+              </span>
+            </td>
+          </tr>
+        </ng-container>
+      </tbody>
+    </table>
+    <p *ngIf="students.length==0">目前無資料</p>
+  </div>
+</div>
