@@ -1,7 +1,9 @@
-import { Component, OnInit, ChangeDetectorRef, Input, Output, EventEmitter } from '@angular/core';
+import { Component, OnInit, ChangeDetectorRef, Input, Output, EventEmitter, HostListener } from '@angular/core';
 import { Class, Student, Absence, Period, Leave } from "./help-class";
 import { AppService } from "./app.service";
 import * as rx from 'rxjs/Rx';
+
+
 
 @Component({
   selector: 'app-root',
@@ -35,7 +37,37 @@ export class AppComponent implements OnInit {
 
   inputDate: string;
 
+  Timer: any;
+  maxTime = 300000;
+  lastTime: Date = new Date();
+
   constructor(private appService: AppService, private change: ChangeDetectorRef) {
+
+    this.Timer = setTimeout(this.showAlert, this.maxTime);
+    let now = new Date();
+  }
+
+  /**
+ * 重設 timeOut
+ */
+  reset() {
+    clearTimeout(this.Timer);
+    this.Timer = setTimeout(this.showAlert, this.maxTime);
+  }
+
+  showAlert() {
+    alert('閒置超過5分鐘，將重新載入....');
+    location.reload();
+  }
+
+  @HostListener('document:mousemove', ['$event'])
+  onMouseMove(e: any) {
+    // console.log('this.maxTime ', this.maxTime);
+    // console.log('this.diff ', dayjs.duration(Math.abs(this.lastTime.diff(now))).asSeconds());
+    // if (this.maxTime < dayjs.duration(Math.abs(this.lastTime.diff(now))).asSeconds()) {
+    //   alert('hahah');
+    // }
+    this.reset();
   }
 
   ngOnInit() {
@@ -73,20 +105,18 @@ export class AppComponent implements OnInit {
         this.allAbsences = x;
         this.periods = y;
         y.forEach((p) => {
-          p.permission ="一般";
-          if (config.periodPermissionMap.size) {            
-            config.periodPermissionMap.forEach((item,key) => {
-              if(key === p.name)
-              {
-                p.permission =config.periodPermissionMap.get(key);
-              }              
+          p.permission = "一般";
+          if (config.periodPermissionMap.size) {
+            config.periodPermissionMap.forEach((item, key) => {
+              if (key === p.name) {
+                p.permission = config.periodPermissionMap.get(key);
+              }
             });
             this.periodMap.set(p.name, p);
           }
-          else
-          {
+          else {
             this.periodMap.set(p.name, p);
-          }          
+          }
         });
 
         this.periods = this.periods.filter(period => period.permission !== "隱藏");
@@ -178,10 +208,9 @@ export class AppComponent implements OnInit {
   setAllStudentsAbs(period: Period) {
     if (period && this.currAbs) {
       this.students.forEach((stu) => {
-        if(period.permission ==="一般")
-        {
+        if (period.permission === "一般") {
           stu.setAbsence(period.name, this.currAbs.name);
-        }        
+        }
       });
     }
   }
@@ -190,10 +219,9 @@ export class AppComponent implements OnInit {
   setStudentAllPeriodAbs(stu) {
     if (stu && this.currAbs) {
       this.periods.forEach((period: Period) => {
-        if(period.permission ==="一般")
-        {
+        if (period.permission === "一般") {
           stu.setAbsence(period.name, this.currAbs.name);
-        }        
+        }
       });
     }
   }
@@ -204,22 +232,19 @@ export class AppComponent implements OnInit {
       if (stu.leaveList.has(period.name)) {
         // 與上次相同即清除
         if (stu.leaveList.get(period.name).absName == this.currAbs.name) {
-          if(period.permission ==="一般" ||period.permission ==="手動")
-          {
+          if (period.permission === "一般" || period.permission === "手動") {
             stu.setAbsence(period.name, this.clearAbs.name);
-          }          
+          }
         }
         else {
-          if(period.permission ==="一般" ||period.permission ==="手動")
-          {
+          if (period.permission === "一般" || period.permission === "手動") {
             stu.setAbsence(period.name, this.currAbs.name);
-          }          
+          }
         }
       } else {
-        if(period.permission ==="一般" ||period.permission ==="手動")
-        {
+        if (period.permission === "一般" || period.permission === "手動") {
           stu.setAbsence(period.name, this.currAbs.name);
-        }        
+        }
       }
     }
   }
