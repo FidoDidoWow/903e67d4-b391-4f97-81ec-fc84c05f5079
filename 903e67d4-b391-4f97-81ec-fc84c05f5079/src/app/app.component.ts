@@ -23,6 +23,10 @@ export class AppComponent implements OnInit {
   periods: Period[] = new Array<Period>();
   periodMap: Map<string, Period> = new Map<string, Period>();
   periodPermissionMap: Map<string, Period> = new Map<string, Period>();
+
+  /**檢查連續的假別 */
+  checkAbsences: Absence[] = new Array<Absence>();
+
   students: Student[] = new Array<Student>();
   classSubject$: rx.Subject<Class> = new rx.Subject();
   /**今天該班點名狀態 */
@@ -102,6 +106,20 @@ export class AppComponent implements OnInit {
         } else {
           this.absences = x;
         }
+
+        // 比對設定檔，為 true 的假別才列入 重覆檢查(目前限1)
+        if (config.checkAbsenceNames.length) {
+          const checkAbsences: Absence[] = [];
+          for (const item of x) {
+            if (config.checkAbsenceNames.indexOf(item.name) !== -1) {
+              checkAbsences.push(item);
+            }
+          }
+          this.checkAbsences = checkAbsences;
+        } else {
+          this.checkAbsences = x;
+        }
+
         this.allAbsences = x;
         this.periods = y;
         y.forEach((p) => {
@@ -252,13 +270,28 @@ export class AppComponent implements OnInit {
   /**儲存點名結果 */
   saveData() {
     let data = [];
+    let hasWarnData = false;;
+    let warnMsg = "提醒，本次新增點名下列個別學生具有連堂【" + this.checkAbsences.map(x => x.name).join(",") + "】紀錄，請確認點名是否正確後存檔 :    ";
+    let warnStudents = [];
 
     this.students.forEach((s) => {
       let tmpDetail: string = '';
+
       s.leaveList.forEach((value, key) => {
         let periodName = s.leaveList.get(key).periodName;
         let periodType = this.periodMap.get(periodName).type;
+        let periodSortOrder = this.periodMap.get(periodName).sort;
         let absName = s.leaveList.get(key).absName;
+
+        if (s.orileaveList.get(periodName) != null) {
+          if (s.leaveList.get(periodName).absName != s.orileaveList.get(periodName).absName) {
+            s.warnCheckList.push(absName + "_" + periodSortOrder);
+          }
+        }
+        else {
+          s.warnCheckList.push(absName + "_" + periodSortOrder);
+        }
+
         tmpDetail += `<Period AbsenceType="${absName}" AttendanceType="${periodType}">${periodName}</Period>`;
       });
 
@@ -266,12 +299,56 @@ export class AppComponent implements OnInit {
         sid: s.sid,
         detail: (tmpDetail) ? `<Attendance>${tmpDetail}</Attendance>` : ''
       });
+
+      // 連堂重覆缺曠處理
+      this.checkAbsences.forEach(Absence => {
+        s.warnCheckList.forEach(element => {
+          let n = parseInt(element.slice(- 1));
+          if (s.warnCheckList.includes(Absence.name + "_" + (n + 1))) {
+
+            if (!warnStudents.includes(s.name)) {
+              warnStudents.push(s.name);
+            }
+            hasWarnData = true;
+          }
+        });
+      });
+
+
+      // 連堂重覆缺曠處理
+      // s.warnCheckList.forEach(element => {
+      //   let n = parseInt(element.slice(- 1));
+      //   if (s.warnCheckList.includes("遲到" + "_" + (n + 1))) {
+
+      //     if (!warnStudents.includes(s.name)) {
+      //       warnStudents.push(s.name);
+      //     }
+      //     hasWarnData = true;
+      //   }
+      // });
+
     });
 
-    this.appService.saveStudentLeave(this.selClass, this.getDateString(this.currentDate), data).subscribe(() => {
-      // 重取缺曠狀態
-      this.toggleClassDate();
-    });
+    warnMsg += warnStudents.join(",");
+
+    if (hasWarnData) {
+      // alert(warnMsg);
+      // 確認後才儲存
+      if (confirm(warnMsg)) {
+        this.appService.saveStudentLeave(this.selClass, this.getDateString(this.currentDate), data).subscribe(() => {
+          // 重取缺曠狀態
+          this.toggleClassDate();
+        });
+      }
+    } else {
+      this.appService.saveStudentLeave(this.selClass, this.getDateString(this.currentDate), data).subscribe(() => {
+        // 重取缺曠狀態
+        this.toggleClassDate();
+      });
+    }
+
+
+
   }
 
 }

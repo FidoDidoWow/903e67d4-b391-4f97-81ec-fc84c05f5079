@@ -9,12 +9,13 @@ export class Class {
 
 /**學生 */
 export class Student {
-  constructor(public sid, public name:string, public seatNo:number, public leaveList: Map<string, Leave>, public orileaveList: Map<string, Leave>) {
+  constructor(public sid, public name: string, public seatNo: number, public leaveList: Map<string, Leave>, public orileaveList: Map<string, Leave>, public warnCheckList: string[]) {
     this.sid = sid;
     this.name = name;
     this.seatNo = seatNo;
     this.leaveList = leaveList || new Map<string, Leave>();
     this.orileaveList = orileaveList || new Map<string, Leave>();
+    this.warnCheckList = [];
   }
 
   setAbsence(periodName: string, absName: string) {
@@ -42,7 +43,7 @@ export class Absence {
 
 /**節次 */
 export class Period {
-  constructor(public name: string, public sort: number, public type: string,public permission: string) {
+  constructor(public name: string, public sort: number, public type: string, public permission: string) {
     this.name = name;
     this.sort = sort;
     this.type = type;
@@ -62,6 +63,7 @@ export class Leave {
 /**班導師點名設定 */
 export interface Config {
   absenceNames: string[];
-  periodPermissionMap : Map<string, string>;
+  periodPermissionMap: Map<string, string>;
   crossDate: boolean;
+  checkAbsenceNames: string[]; // 要確認重覆的缺曠名稱(目前限1)
 }

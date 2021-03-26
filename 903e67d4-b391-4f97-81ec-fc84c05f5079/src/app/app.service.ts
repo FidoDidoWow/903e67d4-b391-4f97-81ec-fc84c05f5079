@@ -64,7 +64,7 @@ export class AppService {
         if (rsp.List && rsp.List.Content && rsp.List.Content.Periods && rsp.List.Content.Periods.Period) {
           rsp.List.Content.Periods.Period = [].concat(rsp.List.Content.Periods.Period || []);
           rsp.List.Content.Periods.Period.forEach((item) => {
-            periods.push(new Period(item.Name, Number(item.Sort), item.Type,""));
+            periods.push(new Period(item.Name, Number(item.Sort), item.Type, ""));
           });
           // 排序
           periods.sort((a, b) => {
@@ -123,7 +123,7 @@ export class AppService {
     return this.send({
       contact: "p_kcbs.rollCallBook.teacher",
       service: "_.getStudentAttendance",
-      body: { classId: selClass.classId , OccurDate: occurDate},
+      body: { classId: selClass.classId, OccurDate: occurDate },
       map: (rsp) => {
         const students = new Array<Student>();
         if (rsp.Student) {
@@ -140,7 +140,7 @@ export class AppService {
                 orileaves.set(p['@text'], new Leave(p['@text'], p.AbsenceType, isLock));
               });
             }
-            students.push(new Student(item.StudentId, item.StudentName, item.SeatNo, leaves, orileaves));
+            students.push(new Student(item.StudentId, item.StudentName, item.SeatNo, leaves, orileaves, []));
           });
         }
         return students;
@@ -174,8 +174,10 @@ export class AppService {
       body: { Name: '班導師點名設定' },
       map: (rsp) => {
         const absenceNames = new Array<string>();
-        
+
         const periodPermissionMap: Map<string, string> = new Map<string, string>();
+
+        const checkAbsenceNames = new Array<string>();;
 
         let crossDate = false;
 
@@ -194,16 +196,26 @@ export class AppService {
           rsp.List.Content.PeriodList.Period = [].concat(rsp.List.Content.PeriodList.Period || []);
           rsp.List.Content.PeriodList.Period.forEach((item) => {
             if (item['@text'] === '一般') {
-              periodPermissionMap.set(item.Name,"一般");
+              periodPermissionMap.set(item.Name, "一般");
             }
             if (item['@text'] === '手動') {
-              periodPermissionMap.set(item.Name,"手動");
+              periodPermissionMap.set(item.Name, "手動");
             }
             if (item['@text'] === '唯讀') {
-              periodPermissionMap.set(item.Name,"唯讀");
+              periodPermissionMap.set(item.Name, "唯讀");
             }
             if (item['@text'] === '隱藏') {
-              periodPermissionMap.set(item.Name,"隱藏");
+              periodPermissionMap.set(item.Name, "隱藏");
+            }
+          });
+        }
+
+        // 需要確認檢查的 連續缺曠類別
+        if (rsp.List && rsp.List.Content && rsp.List.Content.CheckAbsenceList && rsp.List.Content.CheckAbsenceList.Absence) {
+          rsp.List.Content.CheckAbsenceList.Absence = [].concat(rsp.List.Content.CheckAbsenceList.Absence || []);
+          rsp.List.Content.CheckAbsenceList.Absence.forEach((item) => {
+            if (item['@text'] === 'True') {
+              checkAbsenceNames.push(item.Name);
             }
           });
         }
@@ -215,6 +227,7 @@ export class AppService {
           absenceNames: absenceNames,
           periodPermissionMap: periodPermissionMap,
           crossDate: crossDate,
+          checkAbsenceNames: checkAbsenceNames
         };
       }
     }) as Rx.Observable<Config>;
