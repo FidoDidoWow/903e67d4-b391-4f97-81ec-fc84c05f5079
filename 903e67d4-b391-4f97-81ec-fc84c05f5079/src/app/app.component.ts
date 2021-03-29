@@ -24,6 +24,14 @@ export class AppComponent implements OnInit {
   periodMap: Map<string, Period> = new Map<string, Period>();
   periodPermissionMap: Map<string, Period> = new Map<string, Period>();
 
+  allowed = false;;
+
+  // 學校設定的假日
+  holidayList = new Array<string>();
+
+  // 假如支援跨天點名，可以允許的日期
+  allowedDaysList = new Array<string>();
+
   /**檢查連續的假別 */
   checkAbsences: Absence[] = new Array<Absence>();
 
@@ -33,6 +41,10 @@ export class AppComponent implements OnInit {
   completed: boolean;
   /**允許跨日設定 */
   canCrossDate = false;
+
+  // 跨日前後 預設2天
+  beforeDates = 2;
+  afterDates = 2;
 
   currentDate: Date = new Date(new Date().toDateString());
   todayDate: Date = new Date(new Date().toDateString());
@@ -90,10 +102,16 @@ export class AppComponent implements OnInit {
     // 取得假別、節次、老師帶班
     rx.Observable.combineLatest(
       this.appService.getConfig(),
+      this.appService.getSCHOOLHOLIDAYConfig(),
       this.appService.getAbsences(),
       this.appService.getPeriods(),
-      this.appService.getMyClass(), (config, x, y, z) => {
+      this.appService.getMyClass(), (config, SCHOOLHOLIDAYConfig, x, y, z) => {
         this.canCrossDate = config.crossDate;
+        this.holidayList = SCHOOLHOLIDAYConfig.HolidayList;
+
+        this.beforeDates = config.BeforeDates;
+        this.afterDates = config.AfterDates;
+
         // 比對設定檔，為 true 的假別才顯示
         if (config.absenceNames.length) {
           const absencesList: Absence[] = [];
@@ -158,7 +176,60 @@ export class AppComponent implements OnInit {
           // 切換班級
           this.toggleClassDate();
         }
+
+        // 處理學校設定假日非上課、 開放前後幾天點名，
+        // 當天        
+        if (!this.holidayList.includes(this.getDateString(this.todayDate))) {
+          this.allowedDaysList.push(this.getDateString(this.todayDate));
+        }
+
+        // 前幾天
+        for (var i = 1; i <= this.beforeDates; i++) {
+
+          let allowedDay = this.getDateString(new Date(new Date().setDate(new Date(new Date().toDateString()).getDate() - i)));
+
+          if (!this.holidayList.includes(allowedDay) && !this.allowedDaysList.includes(allowedDay)) {
+            this.allowedDaysList.push(allowedDay)
+          }
+          else {
+            for (var ii = 1; ii <= 100; ii++) {
+              let allowedDay2 = this.getDateString(new Date(new Date().setDate(new Date(new Date().toDateString()).getDate() - ii)));
+
+              if (!this.holidayList.includes(allowedDay2) && !this.allowedDaysList.includes(allowedDay2)) {
+                this.allowedDaysList.push(allowedDay2);
+                break;
+              }
+            }
+          }
+        }
+
+        // 後幾天
+        for (var i = 1; i <= this.beforeDates; i++) {
+
+          let allowedDay = this.getDateString(new Date(new Date().setDate(new Date(new Date().toDateString()).getDate() + i)));
+
+          if (!this.holidayList.includes(allowedDay) && !this.allowedDaysList.includes(allowedDay)) {
+            this.allowedDaysList.push(allowedDay)
+          }
+          else {
+            for (var ii = 1; ii <= 100; ii++) {
+              let allowedDay2 = this.getDateString(new Date(new Date().setDate(new Date(new Date().toDateString()).getDate() + ii)));
+
+              if (!this.holidayList.includes(allowedDay2) && !this.allowedDaysList.includes(allowedDay2)) {
+                this.allowedDaysList.push(allowedDay2);
+                break;
+              }
+            }
+          }
+        }
+
+
       });
+
+
+
+
+
   }
   getDateString(dateTime: Date): string {
     return dateTime.getFullYear() + "/" + (dateTime.getMonth() + 1) + "/" + dateTime.getDate();
@@ -199,6 +270,9 @@ export class AppComponent implements OnInit {
       qdate.setDate(qdate.getDate() - qdate.getDay() + i);
       this.quickSelectDate.push(qdate);
     });
+
+
+
   }
 
   /**切換班級或缺曠日期，取得「該日學生缺曠」、「點名完成」狀態 */
@@ -273,6 +347,21 @@ export class AppComponent implements OnInit {
     let hasWarnData = false;;
     let warnMsg = "提醒，本次新增點名下列個別學生具有連堂【" + this.checkAbsences.map(x => x.name).join(",") + "】紀錄，請確認點名是否正確後存檔 :    ";
     let warnStudents = [];
+
+    // 非在開放天 白名單，不給點名存檔
+    if (this.allowedDaysList.includes(this.getDateString(this.currentDate))) {
+      this.allowed = true;
+    }
+    else {
+      this.allowed = false;
+    }
+
+    // 非在正確日期，不開放點名
+    if (!this.allowed) {
+      alert('本系統僅開放非假日當天以及前【' + this.beforeDates + '】天、後【' + this.afterDates + '】天可以點名，目前所選日期非在允許時段。');
+      return;
+    }
+
 
     this.students.forEach((s) => {
       let tmpDetail: string = '';

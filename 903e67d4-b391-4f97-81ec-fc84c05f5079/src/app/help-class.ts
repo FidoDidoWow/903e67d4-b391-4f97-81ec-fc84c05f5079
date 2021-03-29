@@ -66,4 +66,12 @@ export interface Config {
   periodPermissionMap: Map<string, string>;
   crossDate: boolean;
   checkAbsenceNames: string[]; // 要確認重覆的缺曠名稱(目前限1)
+  BeforeDates: number;
+  AfterDates: number;
+}
+
+
+/**學校假日設定 */
+export interface SCHOOLHOLIDAYConfig {
+  HolidayList: string[];
 }

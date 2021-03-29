@@ -1,5 +1,5 @@
 import { Injectable, NgZone } from '@angular/core';
-import { Class, Student, Absence, Period, Leave, Config } from './help-class';
+import { Class, Student, Absence, Period, Leave, Config, SCHOOLHOLIDAYConfig } from './help-class';
 import * as Rx from "rxjs/Rx";
 
 type SendOptions = { contact: string, service: string, body: any, map: (rsp) => any };
@@ -177,9 +177,12 @@ export class AppService {
 
         const periodPermissionMap: Map<string, string> = new Map<string, string>();
 
-        const checkAbsenceNames = new Array<string>();;
+        const checkAbsenceNames = new Array<string>();
 
         let crossDate = false;
+
+        // 開放前後幾天點名預設2天
+        let BeforeDates, AfterDates = 2;
 
         // 可設定的假別
         if (rsp.List && rsp.List.Content && rsp.List.Content.AbsenceList && rsp.List.Content.AbsenceList.Absence) {
@@ -223,14 +226,47 @@ export class AppService {
         if (rsp.List && rsp.List.Content && rsp.List.Content.AbsenceList && rsp.List.Content.AbsenceList.CrossDate) {
           crossDate = (rsp.List.Content.AbsenceList.CrossDate === 'True');
         }
+
+        if (rsp.List && rsp.List.Content && rsp.List.Content.DateAuth) {
+          BeforeDates = rsp.List.Content.DateAuth.BeforeDates;
+          AfterDates = rsp.List.Content.DateAuth.AfterDates;
+        }
+
         return {
           absenceNames: absenceNames,
           periodPermissionMap: periodPermissionMap,
           crossDate: crossDate,
-          checkAbsenceNames: checkAbsenceNames
+          checkAbsenceNames: checkAbsenceNames,
+          BeforeDates: BeforeDates,
+          AfterDates: AfterDates
         };
       }
     }) as Rx.Observable<Config>;
   }
+
+  /**取得學校假日設定 */
+  getSCHOOLHOLIDAYConfig(): Rx.Observable<SCHOOLHOLIDAYConfig> {
+
+    return this.send({
+      contact: "cloud.public",
+      service: "beta.GetSystemConfig",
+      body: { Name: 'SCHOOL_HOLIDAY_CONFIG_STRING' },
+      map: (rsp) => {
+        const HolidayList = new Array<string>();
+
+        // 可設定的假別
+        if (rsp.List && rsp.List.Content && rsp.List.Content.SchoolHolidays && rsp.List.Content.SchoolHolidays.HolidayList && rsp.List.Content.SchoolHolidays.HolidayList.Holiday) {
+          rsp.List.Content.SchoolHolidays.HolidayList.Holiday = [].concat(rsp.List.Content.SchoolHolidays.HolidayList.Holiday || []);
+          rsp.List.Content.SchoolHolidays.HolidayList.Holiday.forEach((item) => {
+            HolidayList.push(item);
+          });
+        }
+        return {
+          HolidayList: HolidayList
+        };
+      }
+    }) as Rx.Observable<SCHOOLHOLIDAYConfig>;
+  }
+
 
 }
